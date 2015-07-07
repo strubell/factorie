@@ -248,3 +248,82 @@ class SpanishPosTag(token:Token, initialIndex:Int) extends PosTag(token, initial
     which also separately holds its desired correct "target" value.  */
 class LabeledSpanishPosTag(token:Token, targetValue:String) extends SpanishPosTag(token, targetValue) with CategoricalLabeling[String]
 
+object GermanPosDomain extends CategoricalDomain[String] {
+  this ++= Vector(
+  "ADJA", //attributives Adjektiv
+  "ADJD", //adverbiales oder prädikatives Adjektiv
+  "ADV", //Adverb
+  "APPR", //Präposition; Zirkumposition links
+  "APPRART", //Präposition mit Artikel
+  "APPO", //Postposition
+  "APZR", //Zirkumposition rechts
+  "ART", //bestimmter oder unbestimmter Artikel
+  "CARD", //Kardinalzahl
+  "FM", //Fremdsprachliches Material
+  "ITJ", //Interjektion
+  "KOUI", //unterordnende Konjunktion mit ``zu'' und Infinitiv
+  "KOUS", //unterordnende Konjunktion mit Satz
+  "KON", //nebenordnende Konjunktion
+  "KOKOM", //Vergleichskonjunktion
+  "NN", //normales Nomen
+  "NE", //Eigennamen
+  "PDS", //substituierendes Demonstrativpronomen
+  "PDAT", //attribuierendes Demonstrativpronomen
+  "PIS", //substituierendes Indefinitpronomen
+  "PIAT", //attribuierendes Indefinitpronomen ohne Determiner
+  "PIDAT", //attribuierendes Indefinitpronomen mit Determiner
+  "PPER", //irreflexives Personalpronomen
+  "PPOSS", //substituierendes Possessivpronomen
+  "PPOSAT", //attribuierendes Possessivpronomen
+  "PRELS", //substituierendes Relativpronomen
+  "PRELAT", //attribuierendes Relativpronomen
+  "PRF", //reflexives Personalpronomen
+  "PWS", //substituierendes Interrogativpronomen
+  "PWAT", //attribuierendes Interrogativpronomen
+  "PWAV", //adverbiales Interrogativ- oder Relativpronomen
+  "PAV", //Pronominaladverb
+  "PTKZU", //``zu'' vor Infinitiv
+  "PTKNEG", //Negationspartikel
+  "PTKVZ", //abgetrennter Verbzusatz
+  "PTKANT", //Antwortpartikel
+  "PTKA", //Partikel bei Adjektiv oder Adverb
+  "TRUNC", //Kompositions-Erstglied
+  "VVFIN", //finites Verb, voll
+  "VVIMP", //Imperativ, voll
+  "VVINF", //Infinitiv, voll
+  "VVIZU", //Infinitiv mit ``zu'', voll
+  "VVPP", //Partizip Perfekt, voll
+  "VAFIN", //finites Verb, aux
+  "VAIMP", //Imperativ, aux
+  "VAINF", //Infinitiv, aux
+  "VAPP", //Partizip Perfekt, aux
+  "VMFIN", //finites Verb, modal
+  "VMINF", //Infinitiv, modal
+  "VMPP", //Partizip Perfekt, modal
+  "XY", //not a word, special symbol
+  "$,", //comma
+  "$.", //end of sentence marker
+  "$(" //parenthesis, brackets, etc.
+  )
+  freeze()
+
+  def isNoun(pos:String): Boolean = pos == "NN"
+  def isProperNoun(pos:String) = pos == "NE"
+  def isVerb(pos:String) = pos(0) == 'V'
+  def isAdjective(pos:String) = pos == "ADJA"
+  def isPersonalPronoun(pos: String) = {pos == "PPER" || pos == "PRF"}
+}
+
+class GermanPosTag(token:Token, intialIndex:Int) extends PosTag(token, intialIndex){
+  def this(token:Token, initialCategory:String) = this(token, GermanPosDomain.index(initialCategory))
+  final def domain = GermanPosDomain
+  def isNoun = GermanPosDomain.isNoun(categoryValue)
+  def isProperNoun = GermanPosDomain.isProperNoun(categoryValue)
+  def isVerb = GermanPosDomain.isVerb(categoryValue)
+  def isAdjective = GermanPosDomain.isAdjective(categoryValue)
+  def isPersonalPronoun = GermanPosDomain.isPersonalPronoun(categoryValue)
+}
+
+
+class LabeledGermanPosTag(token:Token, targetValue:String) extends GermanPosTag(token, targetValue) with CategoricalLabeling[String]
+
