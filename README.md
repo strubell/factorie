@@ -2,6 +2,8 @@
 
 [![Build Status](https://travis-ci.org/factorie/factorie.svg?branch=master)](https://travis-ci.org/factorie/factorie)
 
+EDITED BY ESTHER
+
 This directory contains the source of FACTORIE, a toolkit for probabilistic modeling based on imperatively-defined factor graphs. More information, see [the FACTORIE webpage](http://factorie.cs.umass.edu).
 
 ## Installation
