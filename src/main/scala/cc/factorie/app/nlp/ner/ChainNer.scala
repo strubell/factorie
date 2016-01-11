@@ -424,6 +424,9 @@ object ConllNerOptimizer {
   def main(args: Array[String]) {
     val opts = new ChainNerOpts
     opts.parse(args)
+
+    println(opts.values.flatMap(_.unParse))
+
     opts.serialize.setValue(false)
     import cc.factorie.util.LogUniformDoubleSampler
     val rate = HyperParameter(opts.rate, new LogUniformDoubleSampler(1e-3, 1))
