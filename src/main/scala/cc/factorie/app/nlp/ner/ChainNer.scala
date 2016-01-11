@@ -381,7 +381,7 @@ object ConllChainNerTrainer extends cc.factorie.util.HyperparameterMain {
     opts.parse(args)
 
     println(opts.values.flatMap(_.unParse))
-    
+
     val ner = new ConllChainNer()(ModelProvider.empty, new StaticLexicons()(opts.lexicons.value))
     if (opts.brownClusFile.wasInvoked) {
       println(s"Reading brown cluster file: ${opts.brownClusFile.value}")
