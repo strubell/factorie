@@ -243,11 +243,11 @@ abstract class JobQueueExecutor(memory: Int, className: String, cores: Int = 1) 
   val prefix = s"hyper-search-$date"
   val prefixFile = new java.io.File(prefix)
   prefixFile.mkdirs()
-//  val cwd = System.getProperty("user.dir")
+  val cwd = System.getProperty("user.dir")
 //  val currentRelativePath = Paths.get("")
 //  val cwd = currentRelativePath.toAbsolutePath().toString()
 //  val prefixAbsolutePath = cwd + "/" + prefixFile.getAbsoluteFile.getPath
-//  val prefixAbsolutePath = cwd + "/" + prefix
+  val prefixAbsolutePath = cwd + "/" + prefix
   println(s"QSubExecutor saving logs in $prefix.")
   var id = 0
   def execute(args: Array[String]) = {
@@ -256,8 +256,8 @@ abstract class JobQueueExecutor(memory: Int, className: String, cores: Int = 1) 
     val as = serializeArgs(args)
     import scala.concurrent.ExecutionContext.Implicits.global
     Future {
-//      val thisPrefix = s"$prefixAbsolutePath/job-$thisId"
-      val thisPrefix = s"$prefix/job-$thisId"
+      val thisPrefix = s"$prefixAbsolutePath/job-$thisId"
+//      val thisPrefix = s"$prefix/job-$thisId"
       val outFile = thisPrefix+"-out"
       val jvmCommand = s"java -Xmx${memory}g -classpath '$classpath' -Duser.dir=`pwd` cc.factorie.util.QSubExecutor --className=$className  '--classArgs=$as' --outFile=$outFile"
       val cmdFilename = thisPrefix+"-cmd.sh"
