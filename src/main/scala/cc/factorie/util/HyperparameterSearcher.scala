@@ -240,7 +240,9 @@ abstract class JobQueueExecutor(memory: Int, className: String, cores: Int = 1) 
   def runJob(script: String, logFile: String)
   val date = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(new java.util.Date())
   val prefix = s"hyper-search-$date"
-  new java.io.File(prefix).mkdirs()
+  val prefixFile = new java.io.File(prefix)
+  prefixFile.mkdirs()
+  val prefixAbsolutePath = prefixFile.getAbsolutePath()
   println(s"QSubExecutor saving logs in $prefix.")
   var id = 0
   def execute(args: Array[String]) = {
@@ -249,15 +251,16 @@ abstract class JobQueueExecutor(memory: Int, className: String, cores: Int = 1) 
     val as = serializeArgs(args)
     import scala.concurrent.ExecutionContext.Implicits.global
     Future {
-      val thisPrefix = s"$prefix/job-$thisId"
+      val thisPrefix = s"$prefixAbsolutePath/job-$thisId"
       val outFile = thisPrefix+"-out"
       val jvmCommand = s"java -Xmx${memory}g -classpath '$classpath' cc.factorie.util.QSubExecutor --className=$className  '--classArgs=$as' --outFile=$outFile"
-      val cmdFile = thisPrefix+"-cmd.sh"
-      val s = new OutputStreamWriter(new FileOutputStream(cmdFile))
+      val cmdFilename = thisPrefix+"-cmd.sh"
+      println(s"cmd filename: $cmdFilename")
+      val s = new OutputStreamWriter(new FileOutputStream(cmdFilename))
       s.write(jvmCommand + "\n")
       s.close()
       Thread.sleep(1000)
-      blocking { try { runJob(cmdFile, thisPrefix+"-log.txt") } catch { case c: RuntimeException => () } }
+      blocking { try { runJob(cmdFilename, thisPrefix+"-log.txt") } catch { case c: RuntimeException => () } }
       var done = false
       var tries = 0
       while (!done && tries < 10) {
@@ -299,7 +302,7 @@ object QSubExecutor {
     opts.parse(args)
     val cls = Class.forName(opts.className.value)
     val mainMethod = cls.getMethods.filter(_.getName == "actualMain").head
-    val argsArray = opts.classArgs.value.split("::").toArray
+    val argsArray = opts.classArgs.value.split("::")
     println("Using args \n" + argsArray.mkString("\n"))
     val result = mainMethod.invoke(null, argsArray).asInstanceOf[BoxedDouble].d
     println("---- END OF JOB -----")
