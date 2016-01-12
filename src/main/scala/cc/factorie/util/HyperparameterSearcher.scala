@@ -13,6 +13,7 @@
 package cc.factorie.util
 
 import java.io.{FileOutputStream, OutputStreamWriter}
+import java.nio.file.Paths
 import java.text.SimpleDateFormat
 
 import cc.factorie.variable.Proportions
@@ -242,8 +243,11 @@ abstract class JobQueueExecutor(memory: Int, className: String, cores: Int = 1) 
   val prefix = s"hyper-search-$date"
   val prefixFile = new java.io.File(prefix)
   prefixFile.mkdirs()
-  val cwd = System.getProperty("user.dir")
-  val prefixAbsolutePath = cwd + "/" + prefixFile.getAbsoluteFile.getPath
+//  val cwd = System.getProperty("user.dir")
+  val currentRelativePath = Paths.get("")
+  val cwd = currentRelativePath.toAbsolutePath().toString()
+//  val prefixAbsolutePath = cwd + "/" + prefixFile.getAbsoluteFile.getPath
+  val prefixAbsolutePath = cwd + "/" + prefix
   println(s"QSubExecutor saving logs in $prefix.")
   var id = 0
   def execute(args: Array[String]) = {
