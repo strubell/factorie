@@ -196,13 +196,13 @@ trait ModelProviderCmdOptions extends CmdOptions {
     override def parse(args: Seq[String], index: Int): Int = if(args(index) == "--"+name) { // we don't support shortName
       println("parsing model provider args")
       _value = Paths get args(index + 1)
-      println(s"_value = $_value")
+      println(s"_value = ${_value}")
       _invokedCount += 1
       math.min(index + 2, args.length)
     } else if(args(index).startsWith("--" + name + "=")) {
       _value = Paths get args(index).drop(name.length + 3)
       _invokedCount += 1
-      println(s"_value = $_value")
+      println(s"_value = ${_value}")
       index + 1
     } else index
 
