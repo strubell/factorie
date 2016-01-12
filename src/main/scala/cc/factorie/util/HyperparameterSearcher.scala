@@ -242,7 +242,7 @@ abstract class JobQueueExecutor(memory: Int, className: String, cores: Int = 1) 
   val prefix = s"hyper-search-$date"
   val prefixFile = new java.io.File(prefix)
   prefixFile.mkdirs()
-  val prefixAbsolutePath = prefixFile.getAbsolutePath()
+  val prefixAbsolutePath = prefixFile.getAbsoluteFile.getPath
   println(s"QSubExecutor saving logs in $prefix.")
   var id = 0
   def execute(args: Array[String]) = {
