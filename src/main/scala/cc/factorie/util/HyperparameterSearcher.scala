@@ -259,7 +259,9 @@ abstract class JobQueueExecutor(memory: Int, className: String, cores: Int = 1) 
       val thisPrefix = s"$prefixAbsolutePath/job-$thisId"
 //      val thisPrefix = s"$prefix/job-$thisId"
       val outFile = thisPrefix+"-out"
-      val jvmCommand = s"java -Xmx${memory}g -classpath '$classpath' -Duser.dir=`pwd` cc.factorie.util.QSubExecutor --className=$className  '--classArgs=$as' --outFile=$outFile"
+//      val jvmCommand = s"java -Xmx${memory}g -classpath '$classpath' -Duser.dir=`pwd` cc.factorie.util.QSubExecutor --className=$className  '--classArgs=$as' --outFile=$outFile"
+      val jvmCommand = s"java -Xmx${memory}g -classpath '$classpath' cc.factorie.util.QSubExecutor --className=$className  '--classArgs=$as' --outFile=$outFile"
+
       val cmdFilename = thisPrefix+"-cmd.sh"
 //      println(s"cmd filename: $cmdFilename")
       val s = new OutputStreamWriter(new FileOutputStream(cmdFilename))
@@ -291,7 +293,9 @@ abstract class JobQueueExecutor(memory: Int, className: String, cores: Int = 1) 
  */
 class QSubExecutor(memory: Int, className: String, cores: Int = 1) extends JobQueueExecutor(memory, className, cores) {
   import sys.process._
-  def runJob(script: String, logFile: String) { s"qsub -pe blake $cores -sync y -l mem_token=${memory}G -l mem_free=${memory}G -cwd -j y -o $logFile -S /bin/sh $script".!! }
+//  def runJob(script: String, logFile: String) { s"qsub -pe blake $cores -sync y -l mem_token=${memory}G -l mem_free=${memory}G -cwd -j y -o $logFile -S /bin/sh $script".!! }
+  def runJob(script: String, logFile: String) { s"qsub -pe blake $cores -sync y -l mem_token=${memory}G -l mem_free=${memory}G -j y -o $logFile -S /bin/sh $script".!! }
+
 }
 
 /**
