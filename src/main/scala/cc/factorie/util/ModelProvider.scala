@@ -81,6 +81,7 @@ object ModelProvider {
     new ModelProvider[Consumer] {
       private val url = ClasspathURL[Consumer](suffix)
       val coordinates = url.toString
+      println("lexicons:" + coordinates)
       val provide:InputStream = buffered(url)
     }
 
