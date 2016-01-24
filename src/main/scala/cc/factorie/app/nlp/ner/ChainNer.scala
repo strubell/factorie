@@ -13,6 +13,8 @@ import cc.factorie.variable._
 
 import scala.reflect.{ClassTag, classTag}
 
+import cc.factorie.app.nlp.lemma.LowercaseLemmatizer
+
 /**
  * NER tagger for the CoNLL 2003 corpus
  *
@@ -35,13 +37,13 @@ import scala.reflect.{ClassTag, classTag}
  * PER      f1=0.940327 p=0.955329 r=0.925788 (tp=1497 fp=70 fn=120 true=1617 pred=1567)
  *
  */
-class ConllChainNer(implicit mp:ModelProvider[ConllChainNer], lexicons:StaticLexicons)
+class ConllChainNer(implicit mp:ModelProvider[ConllChainNer], nerLexiconFeatures:NerLexiconFeatures)
   extends ChainNer[BilouConllNerTag](
     BilouConllNerDomain,
     (t, s) => new BilouConllNerTag(t, s),
     l => l.token,
     mp.provide,
-    lexicons) with Serializable {
+    nerLexiconFeatures) with Serializable {
   def loadDocs(fileName: String): Seq[Document] = cc.factorie.app.nlp.load.LoadConll2003(BILOU=true).fromFilename(fileName)
 
   def newSpan(sec: Section, start: Int, length: Int, category: String) = new ConllNerSpan(sec, start, length, category)
@@ -49,17 +51,17 @@ class ConllChainNer(implicit mp:ModelProvider[ConllChainNer], lexicons:StaticLex
   def newBuffer = new ConllNerSpanBuffer
 }
 
-object ConllChainNer extends ConllChainNer()(ModelProvider.classpath[ConllChainNer](), new StaticLexicons()(LexiconsProvider.classpath())) with Serializable
+//TODO this serialized model doesn't exist yet?
+object ConllChainNer extends ConllChainNer()(ModelProvider.classpath(), StaticLexiconFeatures()) with Serializable
 
-class OntonotesChainNer()(implicit mp:ModelProvider[OntonotesChainNer], lexicons:StaticLexicons)
-  extends ChainNer[BilouOntonotesNerTag](BilouOntonotesNerDomain, (t, s) => new BilouOntonotesNerTag(t, s), l => l.token, mp.provide, lexicons) {
+class OntonotesChainNer()(implicit mp:ModelProvider[OntonotesChainNer], nerLexiconFeatures:NerLexiconFeatures)
+  extends ChainNer[BilouOntonotesNerTag](BilouOntonotesNerDomain, (t, s) => new BilouOntonotesNerTag(t, s), l => l.token, mp.provide, nerLexiconFeatures) {
   def newBuffer = new OntonotesNerSpanBuffer()
 
   def newSpan(sec: Section, start: Int, length: Int, category: String) = new OntonotesNerSpan(sec, start, length, category)
 }
 
-// todo a serialized model for this does not exist
-object OntonotesChainNer extends OntonotesChainNer()(ModelProvider.classpath[OntonotesChainNer](), new StaticLexicons()(LexiconsProvider.classpath()))
+object OntonotesChainNer extends OntonotesChainNer()(ModelProvider.classpath(), StaticLexiconFeatures())
 
 /**
  * A base class for finite-state named entity recognizers
@@ -68,10 +70,12 @@ abstract class ChainNer[L<:NerTag](val labelDomain: CategoricalDomain[String] wi
                                    val newLabel: (Token, String) => L,
                                    labelToToken: L => Token,
                                    modelIs: InputStream=null,
-                                   val lexicon: StaticLexicons)(implicit m: ClassTag[L]) extends DocumentAnnotator with Serializable {
+                                   nerLexiconFeatures: NerLexiconFeatures)(implicit m: ClassTag[L]) extends DocumentAnnotator with Serializable {
 
   val prereqAttrs = Seq(classOf[Sentence])
   val postAttrs = Seq(m.runtimeClass)
+
+  val FEATURE_PREFIX_REGEX = "^[^@]*$".r
 
   def process(document:Document) =
     if(document.tokenCount > 0) {
@@ -90,51 +94,6 @@ abstract class ChainNer[L<:NerTag](val labelDomain: CategoricalDomain[String] wi
     } else {
       document
     }
-
-  synchronized {
-
-    lexicon.iesl.Month.toString()
-    lexicon.iesl.Day.toString()
-
-    lexicon.iesl.PersonFirst.toString()
-    lexicon.iesl.PersonFirstHigh.toString()
-    lexicon.iesl.PersonFirstHighest.toString()
-    lexicon.iesl.PersonFirstMedium.toString()
-
-    lexicon.iesl.PersonLast.toString()
-    lexicon.iesl.PersonLastHigh.toString()
-    lexicon.iesl.PersonLastHighest.toString()
-    lexicon.iesl.PersonLastMedium.toString()
-
-    lexicon.iesl.PersonHonorific.toString()
-
-    lexicon.iesl.Company.toString()
-    lexicon.iesl.JobTitle.toString()
-    lexicon.iesl.OrgSuffix.toString()
-
-    lexicon.iesl.Country.toString()
-    lexicon.iesl.City.toString()
-    lexicon.iesl.PlaceSuffix.toString()
-    lexicon.iesl.UsState.toString()
-    lexicon.iesl.Continents.toString()
-
-    lexicon.wikipedia.Person.toString()
-    lexicon.wikipedia.Event.toString()
-    lexicon.wikipedia.Location.toString()
-    lexicon.wikipedia.Organization.toString()
-    lexicon.wikipedia.ManMadeThing.toString()
-    lexicon.iesl.Demonym.toString()
-
-    lexicon.wikipedia.Book.toString()
-    lexicon.wikipedia.Business.toString()
-    lexicon.wikipedia.Film.toString()
-
-    lexicon.wikipedia.LocationAndRedirect.toString()
-    lexicon.wikipedia.PersonAndRedirect.toString()
-    lexicon.wikipedia.OrganizationAndRedirect.toString()
-  }
-
-  println("loaded lexicons")
 
   def tokenAnnotationString(token: Token) = token.attr[L].categoryValue
 
@@ -180,48 +139,10 @@ abstract class ChainNer[L<:NerTag](val labelDomain: CategoricalDomain[String] wi
   def addFeatures(document: Document, vf: Token => CategoricalVectorVar[String]): Unit = {
     document.annotators(classOf[ChainNERFeatures]) = ChainNer.this.getClass
     import cc.factorie.app.strings.simplifyDigits
-    val tokenSequence = document.tokens.toSeq
+    val tokenSequence = document.tokens.toIndexedSeq
 
-    lexicon.iesl.Month.tagText(tokenSequence,vf,"MONTH")
-    lexicon.iesl.Day.tagText(tokenSequence,vf,"DAY")
-
-    lexicon.iesl.PersonFirst.tagText(tokenSequence,vf,"PERSON-FIRST")
-    lexicon.iesl.PersonFirstHigh.tagText(tokenSequence,vf,"PERSON-FIRST-HIGH")
-    lexicon.iesl.PersonFirstHighest.tagText(tokenSequence,vf,"PERSON-FIRST-HIGHEST")
-    lexicon.iesl.PersonFirstMedium.tagText(tokenSequence,vf,"PERSON-FIRST-MEDIUM")
-
-    lexicon.iesl.PersonLast.tagText(tokenSequence,vf,"PERSON-LAST")
-    lexicon.iesl.PersonLastHigh.tagText(tokenSequence,vf,"PERSON-LAST-HIGH")
-    lexicon.iesl.PersonLastHighest.tagText(tokenSequence,vf,"PERSON-LAST-HIGHEST")
-    lexicon.iesl.PersonLastMedium.tagText(tokenSequence,vf,"PERSON-LAST-MEDIUM")
-
-    lexicon.iesl.PersonHonorific.tagText(tokenSequence,vf,"PERSON-HONORIFIC")
-
-    lexicon.iesl.Company.tagText(tokenSequence,vf, "COMPANY")
-    lexicon.iesl.JobTitle.tagText(tokenSequence,vf, "JOB-TITLE")
-    lexicon.iesl.OrgSuffix.tagText(tokenSequence,vf, "ORG-SUFFIX")
-
-    lexicon.iesl.Country.tagText(tokenSequence,vf, "COUNTRY")
-    lexicon.iesl.City.tagText(tokenSequence,vf, "CITY")
-    lexicon.iesl.PlaceSuffix.tagText(tokenSequence,vf, "PLACE-SUFFIX")
-    lexicon.iesl.UsState.tagText(tokenSequence,vf, "USSTATE")
-    lexicon.iesl.Continents.tagText(tokenSequence,vf, "CONTINENT")
-
-    lexicon.wikipedia.Person.tagText(tokenSequence,vf, "WIKI-PERSON")
-    lexicon.wikipedia.Event.tagText(tokenSequence,vf, "WIKI-EVENT")
-    lexicon.wikipedia.Location.tagText(tokenSequence,vf, "WIKI-LOCATION")
-    lexicon.wikipedia.Organization.tagText(tokenSequence,vf, "WIKI-ORG")
-    lexicon.wikipedia.ManMadeThing.tagText(tokenSequence,vf, "MANMADE")
-    lexicon.iesl.Demonym.tagText(tokenSequence,vf, "DEMONYM")
-
-    lexicon.wikipedia.Book.tagText(tokenSequence,vf, "WIKI-BOOK")
-    lexicon.wikipedia.Business.tagText(tokenSequence,vf, "WIKI-BUSINESS")
-    lexicon.wikipedia.Film.tagText(tokenSequence,vf, "WIKI-FILM")
-
-    lexicon.wikipedia.LocationAndRedirect.tagText(tokenSequence,vf, "WIKI-LOCATION-REDIRECT")
-    lexicon.wikipedia.PersonAndRedirect.tagText(tokenSequence,vf, "WIKI-PERSON-REDIRECT")
-    lexicon.wikipedia.OrganizationAndRedirect.tagText(tokenSequence,vf, "WIKI-ORG-REDIRECT")
-
+    nerLexiconFeatures.addLexiconFeatures(tokenSequence, vf)
+    
     for (token <- document.tokens) {
       val features = vf(token)
       val rawWord = token.string
@@ -237,35 +158,55 @@ abstract class ChainNer[L<:NerTag](val labelDomain: CategoricalDomain[String] wi
       }
     }
 
-    for (sentence <- document.sentences)
-      cc.factorie.app.chain.Observations.addNeighboringFeatureConjunctions(sentence.tokens, vf, "^[^@]*$", List(0), List(1), List(2), List(-1), List(-2))
+    for (sentence <- document.sentences) {
+      cc.factorie.app.chain.Observations.addNeighboringFeatures(sentence.tokens,vf,FEATURE_PREFIX_REGEX,-2,2)
+    }
 
+    val tokenBuffer = new CircularBuffer[CategoricalVectorVar[String]](4)
+    val stringBuffer = new CircularBuffer[String](4)
+    // This is a separate iteration as combining them would be semantically different due to addNeighbouringFeatures().
     for (token <- document.tokens) {
-      val word = simplifyDigits(token.string).toLowerCase
-      val features = vf(token)
-      if (word.length < 5){
-        features += "P="+cc.factorie.app.strings.prefix(word, 4)
-        features += "S="+cc.factorie.app.strings.suffix(word, 4)
+      val tokenStr = token.string
+      val tokenFeatures = vf(token)
+      val simpleLowerStr = simplifyDigits(tokenStr).toLowerCase()
+      if (simpleLowerStr.length < 5){
+        tokenFeatures += "P="+cc.factorie.app.strings.prefix(simpleLowerStr, 4)
+        tokenFeatures += "S="+cc.factorie.app.strings.suffix(simpleLowerStr, 4)
+      }
+
+      val nextStr = "NEXTWINDOW="+simpleLowerStr
+
+      // Add features from window of 4 words before and after
+      var i = 0
+      while (i < 4) {
+        val curTok = tokenBuffer(i)
+        if (curTok != null) {
+          curTok += nextStr // add next window feature to the token history
+        }
+        val prevStr = stringBuffer(i)
+        if (prevStr != null) {
+          tokenFeatures += prevStr // add previous window feature to the current token
+        }
+        i += 1
+      }
+      tokenBuffer += vf(token)
+      stringBuffer += "PREVWINDOW="+simpleLowerStr
+    }
+
+    val tokenMap = JavaHashMap[String,Seq[String]]()
+    for (token <- document.tokens) {
+      val tokenStr = token.string
+      if (token.isCapitalized && token.string.length > 1) {
+        if (!tokenMap.contains(tokenStr)) {
+          //First mention of this token
+          tokenMap += (tokenStr -> vf(token).activeCategories.map(f => "FIRSTMENTION=" + f))
+        } else {
+          //Add first mention features
+          vf(token) ++= tokenMap(tokenStr)
+        }
       }
     }
 
-    // Add features from window of 4 words before and after
-    document.tokens.foreach(t => vf(t) ++= t.prevWindow(4).map(t2 => "PREVWINDOW="+simplifyDigits(t2.string).toLowerCase))
-    document.tokens.foreach(t => vf(t) ++= t.nextWindow(4).map(t2 => "NEXTWINDOW="+simplifyDigits(t2.string).toLowerCase))
-
-    document.tokens.foreach(t => {
-      if (t.isCapitalized && t.string.length > 1 &&
-        !vf(t).activeCategories.exists(f => f.matches(".*FIRSTMENTION.*")))
-      {
-        var t2 = t
-        while (t2.hasNext) {
-          t2 = t2.next
-          if (t2.string == t.string) {
-            vf(t2) ++= vf(t).activeCategories.map(f => "FIRSTMENTION="+f)
-          }
-        }
-      }
-    })
     document.tokens.foreach(t => if (t.string.matches("[A-Za-z]+")) vf(t) ++= t.charNGrams(2,5).map(n => "NGRAM="+n))
   }
 
@@ -379,10 +320,9 @@ object ConllChainNerTrainer extends cc.factorie.util.HyperparameterMain {
     val opts = new ChainNerOpts
     implicit val random = new scala.util.Random(0)
     opts.parse(args)
-
     println(opts.values.flatMap(_.unParse))
 
-    val ner = new ConllChainNer()(ModelProvider.empty, new StaticLexicons()(opts.lexicons.value))
+    val ner = new ConllChainNer()(ModelProvider.empty, new StaticLexiconFeatures(new StaticLexicons()(opts.lexicons.value)))
     if (opts.brownClusFile.wasInvoked) {
       println(s"Reading brown cluster file: ${opts.brownClusFile.value}")
       for (line <- scala.io.Source.fromFile(opts.brownClusFile.value).getLines()) {
